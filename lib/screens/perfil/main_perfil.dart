@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rentek/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'Login.dart';
+import '../metodo_pago/PaymentMethod.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -100,14 +101,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Icon(Icons.person, size: 50, color: Colors.black54),
             ),
           ),
+
           if (username == null) ...[
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.0),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.yellow.shade700),
-                onPressed: _navigateToLogin, // Ahora redirige al login y recarga la pantalla
+                onPressed: _navigateToLogin,
                 child: Text("Iniciar Sesión"),
               ),
+            ),
+            ListTile(
+              leading: Icon(Icons.warning, color: Colors.red),
+              title: Text("Es necesario iniciar sesión para acceder a las opciones."),
             ),
           ] else ...[
             ListTile(
@@ -115,55 +121,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: Text("Cerrar Sesión"),
               onTap: _confirmLogout,
             ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.credit_card),
+              title: Text("Método de pago"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => PaymentMethodScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.help_outline),
+              title: Text("Preguntas Frecuentes"),
+              onTap: () {},
+            ),
+            ListTile(
+              leading: Icon(Icons.support_agent),
+              title: Text("Centro de Ayuda"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => PaymentMethodScreen()),
+                );
+              },
+            ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.home),
+              title: Text("Página de inicio"),
+              onTap: () {},
+            ),
+            ListTile(
+              leading: Icon(Icons.card_giftcard),
+              title: Text("Promociones"),
+              onTap: () {},
+            ),
+            ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text("Sobre Rentadora"),
+              onTap: () {},
+            ),
+            Divider(),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text("Sigue a Rentadora", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Icon(Icons.facebook, size: 30),
+                Icon(Icons.camera_alt, size: 30),
+                Icon(Icons.business, size: 30),
+                Icon(Icons.pin_drop, size: 30),
+              ],
+            ),
+            SizedBox(height: 20),
           ],
-          Divider(),
-          ListTile(
-            leading: Icon(Icons.language),
-            title: Text("Idioma y Moneda"),
-            trailing: Text("MXN 🇲🇽"),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: Icon(Icons.help_outline),
-            title: Text("Preguntas Frecuentes"),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: Icon(Icons.support_agent),
-            title: Text("Centro de Ayuda"),
-            onTap: () {},
-          ),
-          Divider(),
-          ListTile(
-            leading: Icon(Icons.home),
-            title: Text("Página de inicio"),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: Icon(Icons.card_giftcard),
-            title: Text("Promociones"),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text("Sobre Rentadora"),
-            onTap: () {},
-          ),
-          Divider(),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text("Sigue a Rentadora", style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Icon(Icons.facebook, size: 30),
-              Icon(Icons.camera_alt, size: 30),
-              Icon(Icons.business, size: 30),
-              Icon(Icons.pin_drop, size: 30),
-            ],
-          ),
-          SizedBox(height: 20),
         ],
       ),
     );

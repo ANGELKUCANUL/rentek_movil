@@ -20,6 +20,8 @@ class _MachineryListScreenState extends State<MachineryListScreen> {
   String? selectedLocation;
   double? minPrice;
   double? maxPrice;
+  String? userId; // Agregar esta línea antes de usar userId
+
 
   @override
   void initState() {
@@ -29,14 +31,16 @@ class _MachineryListScreenState extends State<MachineryListScreen> {
   }
 
   Future<void> checkUserSession() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? storedUsername = prefs.getString('username');
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? storedUsername = prefs.getString('username');
+  String? storedUserId = prefs.getString('userId'); // Obtener userId
 
-    setState(() {
-      username = storedUsername;
-    });
+  setState(() {
+    username = storedUsername;
+    userId = storedUserId; // Guardar userId correctamente
+  });
+}
 
-  }
 
 
   Future<void> fetchMachinery() async {
@@ -237,7 +241,7 @@ class _MachineryListScreenState extends State<MachineryListScreen> {
 
                             return GestureDetector(
                               onTap: () {
-                                if (username == null) {
+                                  if (username == null) {
                                   _showLoginRequiredDialog();
                                 } else {
                                   Navigator.push(
@@ -318,3 +322,4 @@ class _MachineryListScreenState extends State<MachineryListScreen> {
     );
   }
 }
+
