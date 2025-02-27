@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/perfil/main_perfil.dart';
-import 'screens/catalog/machinery_list_screen.dart'; // Importamos la pantalla de catálogo
-
+import 'screens/catalog/machinery_list_screen.dart'; 
+import 'SplashScreen.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: MainScreen(),
+      home: SplashScreen(), // 📌 Ahora inicia con la pantalla de bienvenida
     );
   }
 }

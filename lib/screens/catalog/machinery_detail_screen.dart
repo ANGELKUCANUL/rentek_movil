@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../perfil/Login.dart';
+import 'package:rentek/service/url.dart';
+import 'location_picker_screen.dart';
 
 class MachineryDetailScreen extends StatefulWidget {
   final dynamic machinery;
@@ -19,7 +22,6 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _daysController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-
   bool _isLoading = false;
   String? userId;
   double totalPrice = 0.0;
@@ -33,7 +35,6 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
   Future<void> _loadUserId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? storedUserId = prefs.getString('userId');
-    print("User ID cargado: $storedUserId");
 
     if (storedUserId != null) {
       setState(() {
@@ -47,32 +48,7 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
     }
   }
 
-  Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
-    DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            primaryColor: Colors.amber,
-            colorScheme: ColorScheme.light(primary: Colors.amber),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        controller.text = picked.toLocal().toString().split(' ')[0];
-        _calculateTotal();
-      });
-    }
-  }
-
-  void _calculateTotal() {
+  void _calculateTotalPrice() {
     int days = int.tryParse(_daysController.text) ?? 0;
     double pricePerDay = widget.machinery['rental_price']?.toDouble() ?? 0.0;
     setState(() {
@@ -80,27 +56,32 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
     });
   }
 
+  Future<void> _selectStartDate() async {
+    DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null) {
+      setState(() {
+        _startDateController.text = picked.toString().split(' ')[0];
+      });
+    }
+  }
+
   Future<void> _submitReservation() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (userId == null || widget.machinery == null || widget.machinery['id'] == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: Datos incompletos. Intenta de nuevo.")));
-      return;
-    }
-
-    int days = int.tryParse(_daysController.text) ?? 0;
     DateTime startDate = DateTime.parse(_startDateController.text);
+    int days = int.parse(_daysController.text);
     DateTime endDate = startDate.add(Duration(days: days));
-
-    setState(() {
-      _isLoading = true;
-    });
 
     final reservationData = {
       "rental_start": _startDateController.text,
-      "rental_end": endDate.toIso8601String().split('T')[0],
+      "rental_end": endDate.toString().split(' ')[0],
       "address_entrega": _addressController.text,
-      "userId": userId,
+      "userId": userId ?? "",
       "machineryId": widget.machinery['id'],
       "price": totalPrice,
       "payment_status": "pendiente",
@@ -109,18 +90,24 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("https://rentek.onrender.com/reservations"),
+      Uri.parse('${GlobalData.url}/reservations'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(reservationData),
       );
 
       if (response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Reserva creada exitosamente"), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Reserva creada exitosamente")),
+        );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error al crear la reserva: ${response.body}")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error al crear la reserva")),
+        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
     }
 
     setState(() {
@@ -138,9 +125,8 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.machinery['name'], style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.amber[700],
-        iconTheme: IconThemeData(color: Colors.black),
+        title: Text(widget.machinery['name']),
+        backgroundColor: Colors.yellow[700],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.0),
@@ -156,13 +142,39 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
                   )
                 : Container(height: 250, color: Colors.grey),
             SizedBox(height: 16),
-            Text(widget.machinery['name'], style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black)),
-            SizedBox(height: 8),
-            Text('Ubicación: ${widget.machinery['location']}', style: TextStyle(color: Colors.grey[700])),
-            Text('Precio por día: \$${widget.machinery['rental_price']}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
-            SizedBox(height: 16),
-            Divider(),
-            Text('Reservar Maquinaria', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black)),
+            Text(
+              widget.machinery['name'],
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              "Marca: ${widget.machinery['brand'] ?? "No disponible"}",
+              style: TextStyle(fontSize: 16),
+            ),
+            Text(
+              "Ubicación: ${widget.machinery['location']}",
+              style: TextStyle(fontSize: 16),
+            ),
+            Text(
+              "Precio por día: \$${widget.machinery['rental_price']}",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.orange[800]),
+            ),
+            Text(
+              "Descripción: ${widget.machinery['description'] ?? "No disponible"}",
+              style: TextStyle(fontSize: 16),
+            ),
+            Divider(thickness: 2),
+            Text(
+              "Proveedor: ${widget.provider['name']}",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text("Correo: ${widget.provider['email']}"),
+            Text("Teléfono: ${widget.provider['phoneNumber']}"),
+            Text("Calificación: ${widget.provider['rating'] ?? "No disponible"}"),
+            SizedBox(height: 24),
+            Text(
+              "Reservar Maquinaria",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.yellow[800]),
+            ),
             Form(
               key: _formKey,
               child: Column(
@@ -172,35 +184,86 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
                     decoration: InputDecoration(
                       labelText: "Fecha de inicio",
                       suffixIcon: IconButton(
-                        icon: Icon(Icons.calendar_today, color: Colors.amber[800]),
-                        onPressed: () => _selectDate(context, _startDateController),
+                        icon: Icon(Icons.calendar_today, color: Colors.yellow[800]),
+                        onPressed: _selectStartDate,
                       ),
+                      border: OutlineInputBorder(),
                     ),
-                    validator: (value) => value!.isEmpty ? 'Ingrese la fecha de inicio' : null,
                     readOnly: true,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Seleccione una fecha de inicio';
+                      }
+                      return null;
+                    },
                   ),
+                  SizedBox(height: 16),
                   TextFormField(
                     controller: _daysController,
+                    decoration: InputDecoration(
+                      labelText: "Cantidad de días",
+                      border: OutlineInputBorder(),
+                    ),
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(labelText: "Cantidad de días"),
-                    validator: (value) => value!.isEmpty ? 'Ingrese los días de renta' : null,
-                    onChanged: (value) => _calculateTotal(),
+                    onChanged: (_) => _calculateTotalPrice(),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Ingrese la cantidad de días';
+                      }
+                      return null;
+                    },
                   ),
                   SizedBox(height: 16),
-                  Text("Costo total: \$${totalPrice.toStringAsFixed(2)}", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
-                  SizedBox(height: 16),
                   TextFormField(
-                    controller: _addressController,
-                    decoration: InputDecoration(labelText: "Dirección de entrega"),
-                    validator: (value) => value!.isEmpty ? 'Ingrese la dirección de entrega' : null,
+                  controller: _addressController,
+                  decoration: InputDecoration(
+                    labelText: "Dirección de entrega",
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.location_on, color: Colors.yellow[800]),
+                  ),
+                  readOnly: true,
+                  onTap: () async {
+                    LatLng? selectedLocation;
+                    String? selectedAddress;
+
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LocationPickerScreen(
+                          onLocationSelected: (LatLng location, String address) {
+                            selectedLocation = location;
+                            selectedAddress = address;
+                          },
+                        ),
+                      ),
+                    );
+
+                    if (selectedAddress != null && selectedLocation != null) {
+                      setState(() {
+                        _addressController.text = selectedAddress!;
+                      });
+                    }
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Ingrese la dirección de entrega';
+                    }
+                    return null;
+                  },
+                ),
+
+                  SizedBox(height: 16),
+                  Text(
+                    "Total a pagar: \$${totalPrice.toStringAsFixed(2)}",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange[800]),
                   ),
                   SizedBox(height: 16),
                   _isLoading
                       ? CircularProgressIndicator()
                       : ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.yellow[700]),
                           onPressed: _submitReservation,
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.amber[700]),
-                          child: Text('Reservar', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                          child: Text('Reservar', style: TextStyle(color: Colors.black)),
                         ),
                 ],
               ),
@@ -211,3 +274,5 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
     );
   }
 }
+
+

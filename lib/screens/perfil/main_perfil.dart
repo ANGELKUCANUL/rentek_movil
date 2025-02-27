@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rentek/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'Login.dart';
-import '../metodo_pago/PaymentMethod.dart';
+import 'metodo_pago/PaymentMethod.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
