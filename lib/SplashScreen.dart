@@ -80,11 +80,11 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Ícono de maquinaria con animación
-            Icon(
-              Icons.construction, // Ícono de construcción/maquinaria
-              size: 100,
-              color: Colors.yellow.shade600,
+            // Imagen con animación
+            Image.asset(
+              'assets/image/maqui.png', // Reemplaza con la ruta de tu imagen
+              width: 100, // Ajusta el tamaño de la imagen
+              height: 100,
             ).animate()
                 .scale(duration: 800.ms, begin: Offset(0.8, 0.8), end: Offset(1, 1), curve: Curves.easeOut)
                 .fadeIn(duration: 500.ms)
@@ -92,7 +92,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 .shake(duration: 500.ms, hz: 4) // Efecto de vibración
                 .then(delay: 500.ms),
 
-            SizedBox(height: 20), // Espacio entre el ícono y el texto
+            SizedBox(height: 20), // Espacio entre la imagen y el texto
 
             // Texto de bienvenida con animación
             Column(
