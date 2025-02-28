@@ -18,6 +18,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   Future<void> _register() async {
     setState(() {
@@ -89,7 +91,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           body: SingleChildScrollView(
             child: Column(
               children: [
-                // Encabezado más largo con fondo amarillo
                 Container(
                   height: 200,
                   decoration: BoxDecoration(
@@ -100,7 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.person_add, size: 70, color: Colors.yellow.shade800), // Icono representativo
+                        Icon(Icons.person_add, size: 70, color: Colors.yellow.shade800),
                         SizedBox(height: 10),
                         Text(
                           "Crear Cuenta",
@@ -117,9 +118,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 SizedBox(height: 15),
                 _buildTextField(controller: _phoneController, label: "Número de teléfono", icon: Icons.phone),
                 SizedBox(height: 15),
-                _buildTextField(controller: _passwordController, label: "Contraseña", icon: Icons.lock, obscureText: true),
+                _buildPasswordField(controller: _passwordController, label: "Contraseña", obscureText: _obscurePassword, toggleVisibility: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                }),
                 SizedBox(height: 15),
-                _buildTextField(controller: _confirmPasswordController, label: "Confirmar contraseña", icon: Icons.lock_outline, obscureText: true),
+                _buildPasswordField(controller: _confirmPasswordController, label: "Confirmar contraseña", obscureText: _obscureConfirmPassword, toggleVisibility: () {
+                  setState(() {
+                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                  });
+                }),
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _register,
@@ -163,11 +172,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: TextField(
         controller: controller,
         obscureText: obscureText,
-        style: TextStyle(color: Colors.black), // Texto negro
+        style: TextStyle(color: Colors.black),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(color: Colors.black),
-          prefixIcon: Icon(icon, color: Colors.black), // Icono representativo
+          prefixIcon: Icon(icon, color: Colors.black),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String label,
+    required bool obscureText,
+    required VoidCallback toggleVisibility,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        style: TextStyle(color: Colors.black),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: Colors.black),
+          prefixIcon: Icon(Icons.lock, color: Colors.black),
+          suffixIcon: IconButton(
+            icon: Icon(
+              obscureText ? Icons.visibility_off : Icons.visibility,
+              color: Colors.black,
+            ),
+            onPressed: toggleVisibility,
+          ),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
