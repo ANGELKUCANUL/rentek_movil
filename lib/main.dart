@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'screens/perfil/main_perfil.dart';
 import 'screens/catalog/machinery_list_screen.dart'; 
 import 'SplashScreen.dart';
+import 'screens/reservaciones/ReservationsScreen.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
@@ -34,10 +35,11 @@ class _MainScreenState extends State<MainScreen> {
   // Lista de pantallas para cambiar dinámicamente
   final List<Widget> _screens = [
     MachineryListScreen(), // 📌 Ahora la pantalla de inicio es el catálogo
-    Center(child: Text("Reservas", style: TextStyle(fontSize: 24))),
+    ReservationsScreen(), // Ahora muestra las reservas del usuario
     Center(child: Text("Ayuda", style: TextStyle(fontSize: 24))),
     ProfileScreen(),
   ];
+
 
   void _onItemTapped(int index) {
     if (index == 3) {

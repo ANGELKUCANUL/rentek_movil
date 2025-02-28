@@ -6,6 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../perfil/Login.dart';
 import 'package:rentek/service/url.dart';
 import 'location_picker_screen.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../../main.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+
 
 class MachineryDetailScreen extends StatefulWidget {
   final dynamic machinery;
@@ -15,13 +21,17 @@ class MachineryDetailScreen extends StatefulWidget {
 
   @override
   _MachineryDetailScreenState createState() => _MachineryDetailScreenState();
+
 }
+
 
 class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _daysController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin(); 
   bool _isLoading = false;
   String? userId;
   double totalPrice = 0.0;
@@ -29,8 +39,27 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeNotifications();
     _loadUserId();
+    _requestPermissions(); // 🔥 IMPORTANTE
   }
+
+  void _initializeNotifications() {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher'); 
+
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+    flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        print("🛎 Notificación tocada: ${response.payload}");
+      },
+    );
+  }
+
+
 
   Future<void> _loadUserId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -48,6 +77,7 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
     }
   }
 
+
   void _calculateTotalPrice() {
     int days = int.tryParse(_daysController.text) ?? 0;
     double pricePerDay = widget.machinery['rental_price']?.toDouble() ?? 0.0;
@@ -56,19 +86,62 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
     });
   }
 
-  Future<void> _selectStartDate() async {
-    DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2101),
-    );
-    if (picked != null) {
-      setState(() {
-        _startDateController.text = picked.toString().split(' ')[0];
-      });
+  Future<void> _requestPermissions() async {
+    // Obtener la versión de Android
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+
+    if (androidInfo.version.sdkInt >= 33) { // Android 13+
+      final status = await Permission.notification.request();
+
+      if (status.isGranted) {
+        print("Permiso de notificación concedido.");
+      } else if (status.isDenied) {
+        print("⚠️ Permisos de notificación denegados.");
+      } else if (status.isPermanentlyDenied) {
+        print("⚠️ El usuario ha denegado permanentemente los permisos de notificación.");
+        // Si el permiso está permanentemente denegado, puedes redirigir al usuario a la configuración de la aplicación:
+        openAppSettings();
+      }
     }
   }
+
+
+
+  Future<void> _selectStartDate() async {
+    DateTime now = DateTime.now();
+    DateTime minDate = now.add(Duration(days: 2)); // Mínimo dos días después de hoy
+
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: minDate,
+      firstDate: minDate, // Bloquea fechas antes de dos días después de hoy
+      lastDate: DateTime(2101),
+    );
+
+    if (pickedDate != null) {
+      TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (pickedTime != null) {
+        DateTime fullDateTime = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+
+        setState(() {
+          _startDateController.text = fullDateTime.toString();
+        });
+      }
+    }
+  }
+
+
 
   Future<void> _submitReservation() async {
     if (!_formKey.currentState!.validate()) return;
@@ -88,16 +161,28 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
       "delivery_status": "pendiente",
     };
 
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       final response = await http.post(
-      Uri.parse('${GlobalData.url}/reservations'),
+        Uri.parse('${GlobalData.url}/reservations'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(reservationData),
       );
 
       if (response.statusCode == 201) {
+        _showNotification(); // Muestra la notificación
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Reserva creada exitosamente")),
+        );
+
+        // Redirigir al usuario al MainScreen y eliminar el historial de navegación
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => MainScreen()),
+          (Route<dynamic> route) => false,
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -114,6 +199,29 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
       _isLoading = false;
     });
   }
+
+  Future<void> _showNotification() async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'reservation_channel', // ID del canal
+      'Reservas', // Nombre del canal
+      channelDescription: 'Notificación de reserva confirmada',
+      importance: Importance.high,
+      priority: Priority.high,
+      ticker: 'ticker',
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Reserva Confirmada',
+      'Tu reserva ha sido creada con éxito. Gracias por usar nuestro servicio.',
+      platformChannelSpecifics,
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -179,24 +287,23 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
               key: _formKey,
               child: Column(
                 children: [
-                  TextFormField(
-                    controller: _startDateController,
-                    decoration: InputDecoration(
-                      labelText: "Fecha de inicio",
-                      suffixIcon: IconButton(
-                        icon: Icon(Icons.calendar_today, color: Colors.yellow[800]),
-                        onPressed: _selectStartDate,
-                      ),
-                      border: OutlineInputBorder(),
-                    ),
-                    readOnly: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Seleccione una fecha de inicio';
-                      }
-                      return null;
-                    },
+                TextFormField(
+                  controller: _startDateController,
+                  decoration: InputDecoration(
+                    labelText: "Fecha de inicio",
+                    suffixIcon: Icon(Icons.calendar_today, color: Colors.yellow[800]),
+                    border: OutlineInputBorder(),
                   ),
+                  readOnly: true, // Para evitar que el usuario escriba directamente
+                  onTap: _selectStartDate, // Llama al selector de fecha al tocar el campo
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Seleccione una fecha de inicio';
+                    }
+                    return null;
+                  },
+                ),
+
                   SizedBox(height: 16),
                   TextFormField(
                     controller: _daysController,
