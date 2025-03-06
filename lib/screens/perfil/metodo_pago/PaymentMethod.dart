@@ -2,8 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../service/url.dart';
+import 'package:flutter/services.dart'; // Para TextInputFormatter
 import 'package:intl/intl.dart'; // Para trabajar con fechas
+import '../../../service/url.dart';
+
+
+// Clase auxiliar para el formato de la fecha de expiración
+class ExpirationDateFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    String newText = newValue.text.replaceAll('/', '');
+    
+    if (newText.isEmpty) {
+      return newValue;
+    }
+    
+    if (newText.length > 4) {
+      return oldValue;
+    }
+    
+    if (newText.length > 2) {
+      return TextEditingValue(
+        text: '${newText.substring(0, 2)}/${newText.substring(2)}',
+        selection: TextSelection.collapsed(offset: newText.length + 1),
+      );
+    }
+    
+    return newValue;
+  }
+}
 
 class PaymentMethodScreen extends StatefulWidget {
   @override
@@ -81,61 +109,63 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Agregar Método de Pago'),
-        content: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Nombre del titular
-              TextFormField(
-                controller: cardHolderController,
-                decoration: InputDecoration(labelText: 'Nombre del Titular'),
-                validator: (value) =>
-                    value!.isEmpty ? 'Ingrese el nombre del titular' : null,
-              ),
-              // Número de tarjeta
-              TextFormField(
-                controller: cardNumberController,
-                decoration: InputDecoration(labelText: 'Número de Tarjeta'),
-                keyboardType: TextInputType.number,
-                maxLength: 16,
-                validator: (value) {
-                  if (value!.isEmpty) return 'Ingrese un número de tarjeta';
-                  if (!RegExp(r'^\d{16}$').hasMatch(value)) {
-                    return 'Debe contener exactamente 16 dígitos';
-                  }
-                  return null;
-                },
-              ),
-              // Fecha de expiración
-              TextFormField(
-                controller: expirationDateController,
-                decoration: InputDecoration(labelText: 'Fecha de Expiración (MM/AA)'),
-                keyboardType: TextInputType.number,
-                maxLength: 5,
-                validator: (value) {
-                  if (value!.isEmpty) return 'Ingrese una fecha válida';
-                  if (!RegExp(r'^\d{2}/\d{2}$').hasMatch(value)) {
-                    return 'Formato incorrecto (MM/AA)';
-                  }
-                  return _validateExpirationDate(value);
-                },
-              ),
-              // CVV
-              TextFormField(
-                controller: cvvController,
-                decoration: InputDecoration(labelText: 'CVV'),
-                keyboardType: TextInputType.number,
-                maxLength: 3,
-                validator: (value) {
-                  if (value!.isEmpty) return 'Ingrese el CVV';
-                  if (!RegExp(r'^\d{3}$').hasMatch(value)) {
-                    return 'Debe tener 3 dígitos';
-                  }
-                  return null;
-                },
-              ),
-            ],
+        content: SingleChildScrollView( // Agregamos SingleChildScrollView aquí
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: cardHolderController,
+                  decoration: InputDecoration(labelText: 'Nombre del Titular'),
+                  validator: (value) =>
+                      value!.isEmpty ? 'Ingrese el nombre del titular' : null,
+                ),
+                TextFormField(
+                  controller: cardNumberController,
+                  decoration: InputDecoration(labelText: 'Número de Tarjeta'),
+                  keyboardType: TextInputType.number,
+                  maxLength: 16,
+                  validator: (value) {
+                    if (value!.isEmpty) return 'Ingrese un número de tarjeta';
+                    if (!RegExp(r'^\d{16}$').hasMatch(value)) {
+                      return 'Debe contener exactamente 16 dígitos';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: expirationDateController,
+                  decoration: InputDecoration(labelText: 'Fecha de Expiración (MM/AA)'),
+                  keyboardType: TextInputType.number,
+                  maxLength: 5,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    ExpirationDateFormatter(),
+                  ],
+                  validator: (value) {
+                    if (value!.isEmpty) return 'Ingrese una fecha válida';
+                    if (!RegExp(r'^\d{2}/\d{2}$').hasMatch(value)) {
+                      return 'Formato incorrecto (MM/AA)';
+                    }
+                    return _validateExpirationDate(value);
+                  },
+                ),
+                TextFormField(
+                  controller: cvvController,
+                  decoration: InputDecoration(labelText: 'CVV'),
+                  keyboardType: TextInputType.number,
+                  maxLength: 3,
+                  validator: (value) {
+                    if (value!.isEmpty) return 'Ingrese el CVV';
+                    if (!RegExp(r'^\d{3}$').hasMatch(value)) {
+                      return 'Debe tener 3 dígitos';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -163,7 +193,6 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     );
   }
 
-  /// Valida que la fecha de expiración sea mayor a la fecha actual.
   String? _validateExpirationDate(String value) {
     try {
       final now = DateTime.now();
@@ -217,7 +246,10 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
         ),
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
-          BoxShadow(color: const Color.fromARGB(66, 61, 34, 156), blurRadius: 8, offset: Offset(0, 4))
+          BoxShadow(
+              color: const Color.fromARGB(66, 61, 34, 156),
+              blurRadius: 8,
+              offset: Offset(0, 4))
         ],
       ),
       child: Column(
@@ -225,7 +257,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
         children: [
           Text(
             paymentMethod['card_holder'],
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           SizedBox(height: 12),
           Text(
@@ -236,8 +269,11 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Expira: ${paymentMethod['expiration_date']}', style: TextStyle(color: Colors.white70)),
-              IconButton(icon: Icon(Icons.delete, color: Colors.redAccent), onPressed: () => _deletePaymentMethod(paymentMethod['id'])),
+              Text('Expira: ${paymentMethod['expiration_date']}',
+                  style: TextStyle(color: Colors.white70)),
+              IconButton(
+                  icon: Icon(Icons.delete, color: Colors.redAccent),
+                  onPressed: () => _deletePaymentMethod(paymentMethod['id'])),
             ],
           ),
         ],
@@ -245,3 +281,4 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     );
   }
 }
+
