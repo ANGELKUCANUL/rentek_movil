@@ -10,8 +10,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../main.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
-
-
+import '../perfil/metodo_pago/payment.dart'; // Asegúrate de que este import sea correcto
 
 class MachineryDetailScreen extends StatefulWidget {
   final dynamic machinery;
@@ -21,9 +20,7 @@ class MachineryDetailScreen extends StatefulWidget {
 
   @override
   _MachineryDetailScreenState createState() => _MachineryDetailScreenState();
-
 }
-
 
 class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
   final _formKey = GlobalKey<FormState>();
@@ -31,7 +28,7 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
   final TextEditingController _daysController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-  FlutterLocalNotificationsPlugin(); 
+      FlutterLocalNotificationsPlugin();
   bool _isLoading = false;
   String? userId;
   double totalPrice = 0.0;
@@ -41,12 +38,12 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
     super.initState();
     _initializeNotifications();
     _loadUserId();
-    _requestPermissions(); // 🔥 IMPORTANTE
+    _requestPermissions();
   }
 
   void _initializeNotifications() {
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher'); 
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
@@ -58,8 +55,6 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
       },
     );
   }
-
-
 
   Future<void> _loadUserId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -77,7 +72,6 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
     }
   }
 
-
   void _calculateTotalPrice() {
     int days = int.tryParse(_daysController.text) ?? 0;
     double pricePerDay = widget.machinery['rental_price']?.toDouble() ?? 0.0;
@@ -87,35 +81,30 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
   }
 
   Future<void> _requestPermissions() async {
-    // Obtener la versión de Android
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
 
-    if (androidInfo.version.sdkInt >= 33) { // Android 13+
+    if (androidInfo.version.sdkInt >= 33) {
       final status = await Permission.notification.request();
-
       if (status.isGranted) {
         print("Permiso de notificación concedido.");
       } else if (status.isDenied) {
         print("⚠️ Permisos de notificación denegados.");
       } else if (status.isPermanentlyDenied) {
-        print("⚠️ El usuario ha denegado permanentemente los permisos de notificación.");
-        // Si el permiso está permanentemente denegado, puedes redirigir al usuario a la configuración de la aplicación:
+        print("⚠️ El usuario ha denegado permanentemente los permisos.");
         openAppSettings();
       }
     }
   }
 
-
-
   Future<void> _selectStartDate() async {
     DateTime now = DateTime.now();
-    DateTime minDate = now.add(Duration(days: 2)); // Mínimo dos días después de hoy
+    DateTime minDate = now.add(Duration(days: 2));
 
     DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: minDate,
-      firstDate: minDate, // Bloquea fechas antes de dos días después de hoy
+      firstDate: minDate,
       lastDate: DateTime(2101),
     );
 
@@ -140,8 +129,6 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
       }
     }
   }
-
-
 
   Future<void> _submitReservation() async {
     if (!_formKey.currentState!.validate()) return;
@@ -173,12 +160,11 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
       );
 
       if (response.statusCode == 201) {
-        _showNotification(); // Muestra la notificación
+        _showNotification();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Reserva creada exitosamente")),
         );
 
-        // Redirigir al usuario al MainScreen y eliminar el historial de navegación
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => MainScreen()),
@@ -203,8 +189,8 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
   Future<void> _showNotification() async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'reservation_channel', // ID del canal
-      'Reservas', // Nombre del canal
+      'reservation_channel',
+      'Reservas',
       channelDescription: 'Notificación de reserva confirmada',
       importance: Importance.high,
       priority: Priority.high,
@@ -217,11 +203,39 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
     await flutterLocalNotificationsPlugin.show(
       0,
       'Reserva Confirmada',
-      'Tu reserva ha sido creada con éxito. Gracias por usar nuestro servicio.',
+      'Tu reserva ha sido creada con éxito.',
       platformChannelSpecifics,
     );
   }
 
+  void _navigateToPaymentMethodScreen() {
+    if (!_formKey.currentState!.validate()) return;
+
+    DateTime startDate = DateTime.parse(_startDateController.text);
+    int days = int.parse(_daysController.text);
+    DateTime endDate = startDate.add(Duration(days: days));
+
+    final reservationData = {
+      "rental_start": _startDateController.text,
+      "rental_end": endDate.toString().split(' ')[0],
+      "address_entrega": _addressController.text,
+      "userId": userId ?? "",
+      "machineryId": widget.machinery['id'],
+      "price": totalPrice,
+      "payment_status": "pendiente",
+      "delivery_status": "pendiente",
+    };
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentScreen(
+          totalPrice: totalPrice,
+          reservationData: reservationData,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -264,7 +278,10 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
             ),
             Text(
               "Precio por día: \$${widget.machinery['rental_price']}",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.orange[800]),
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange[800]),
             ),
             Text(
               "Descripción: ${widget.machinery['description'] ?? "No disponible"}",
@@ -277,33 +294,37 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
             ),
             Text("Correo: ${widget.provider['email']}"),
             Text("Teléfono: ${widget.provider['phoneNumber']}"),
-            Text("Calificación: ${widget.provider['rating'] ?? "No disponible"}"),
+            Text(
+                "Calificación: ${widget.provider['rating'] ?? "No disponible"}"),
             SizedBox(height: 24),
             Text(
               "Reservar Maquinaria",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.yellow[800]),
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.yellow[800]),
             ),
             Form(
               key: _formKey,
               child: Column(
                 children: [
-                TextFormField(
-                  controller: _startDateController,
-                  decoration: InputDecoration(
-                    labelText: "Fecha de inicio",
-                    suffixIcon: Icon(Icons.calendar_today, color: Colors.yellow[800]),
-                    border: OutlineInputBorder(),
+                  TextFormField(
+                    controller: _startDateController,
+                    decoration: InputDecoration(
+                      labelText: "Fecha de inicio",
+                      suffixIcon:
+                          Icon(Icons.calendar_today, color: Colors.yellow[800]),
+                      border: OutlineInputBorder(),
+                    ),
+                    readOnly: true,
+                    onTap: _selectStartDate,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Seleccione una fecha de inicio';
+                      }
+                      return null;
+                    },
                   ),
-                  readOnly: true, // Para evitar que el usuario escriba directamente
-                  onTap: _selectStartDate, // Llama al selector de fecha al tocar el campo
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Seleccione una fecha de inicio';
-                    }
-                    return null;
-                  },
-                ),
-
                   SizedBox(height: 16),
                   TextFormField(
                     controller: _daysController,
@@ -322,47 +343,56 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
                   ),
                   SizedBox(height: 16),
                   TextFormField(
-                  controller: _addressController,
-                  decoration: InputDecoration(
-                    labelText: "Dirección de entrega",
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.location_on, color: Colors.yellow[800]),
-                  ),
-                  readOnly: true,
-                  onTap: () async {
-                    LatLng? selectedLocation;
-                    String? selectedAddress;
+                    controller: _addressController,
+                    decoration: InputDecoration(
+                      labelText: "Dirección de entrega",
+                      border: OutlineInputBorder(),
+                      suffixIcon:
+                          Icon(Icons.location_on, color: Colors.yellow[800]),
+                    ),
+                    readOnly: true,
+                    onTap: () async {
+                      LatLng? selectedLocation;
+                      String? selectedAddress;
 
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => LocationPickerScreen(
-                          onLocationSelected: (LatLng location, String address) {
-                            selectedLocation = location;
-                            selectedAddress = address;
-                          },
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => LocationPickerScreen(
+                            onLocationSelected: (LatLng location, String address) {
+                              selectedLocation = location;
+                              selectedAddress = address;
+                            },
+                          ),
                         ),
-                      ),
-                    );
+                      );
 
-                    if (selectedAddress != null && selectedLocation != null) {
-                      setState(() {
-                        _addressController.text = selectedAddress!;
-                      });
-                    }
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Ingrese la dirección de entrega';
-                    }
-                    return null;
-                  },
-                ),
-
+                      if (selectedAddress != null && selectedLocation != null) {
+                        setState(() {
+                          _addressController.text = selectedAddress!;
+                        });
+                      }
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Ingrese la dirección de entrega';
+                      }
+                      return null;
+                    },
+                  ),
                   SizedBox(height: 16),
                   Text(
                     "Total a pagar: \$${totalPrice.toStringAsFixed(2)}",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange[800]),
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[800]),
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700]),
+                    onPressed: _navigateToPaymentMethodScreen,
+                    child: Text('Agregar Método de Pago', style: TextStyle(color: Colors.white)),
                   ),
                   SizedBox(height: 16),
                   _isLoading
@@ -381,5 +411,4 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
     );
   }
 }
-
 
