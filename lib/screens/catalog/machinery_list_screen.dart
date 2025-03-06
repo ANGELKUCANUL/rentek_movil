@@ -10,17 +10,6 @@ class MachineryListScreen extends StatefulWidget {
   _MachineryListScreenState createState() => _MachineryListScreenState();
 }
 
-class _MachineryListScreenState extends State<MachineryListScreen> {
-  List<dynamic> machineryList = [];
-  List<dynamic> filteredMachineryList = [];
-  bool isLoading = true;
-  String? username;
-  String searchQuery = '';
-  String? selectedBrand;
-  String? selectedLocation;
-  double? minPrice;
-  double? maxPrice;
-  String? userId; // Agregar esta línea antes de usar userId
 
 
   @override
