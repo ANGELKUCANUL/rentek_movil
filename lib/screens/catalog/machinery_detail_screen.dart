@@ -396,7 +396,12 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
                   ),
                   SizedBox(height: 16),
                   _isLoading
-                      
+                      ? CircularProgressIndicator()
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.yellow[700]),
+                          onPressed: _submitReservation,
+                          child: Text('Reservar', style: TextStyle(color: Colors.black)),
+                        ),
                 ],
               ),
             ),
