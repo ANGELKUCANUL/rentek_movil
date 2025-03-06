@@ -23,12 +23,7 @@ class _MachineryListScreenState extends State<MachineryListScreen> {
   String? userId; // Agregar esta línea antes de usar userId
 
 
-  @override
-  void initState() {
-    super.initState();
-    fetchMachinery();
-    checkUserSession();
-  }
+ 
 
   Future<void> checkUserSession() async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
