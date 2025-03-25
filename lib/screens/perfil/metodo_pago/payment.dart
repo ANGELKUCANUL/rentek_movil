@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../../service/url.dart';
+import 'package:rentek/service/url.dart'; // Para usar GlobalData.url
+import 'package:rentek/main.dart';
 
 class PaymentScreen extends StatefulWidget {
   final double totalPrice;
@@ -15,196 +16,121 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  List<dynamic> paymentMethods = [];
-  String? userId;
-  dynamic selectedPaymentMethod;
   bool _isLoading = false;
+  String _statusMessage = "Esperando confirmación del pago...";
 
-  @override
-  void initState() {
-    super.initState();
-    _loadUserId();
-  }
-
-  Future<void> _loadUserId() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userId = prefs.getString('userId');
-    });
-    if (userId != null) {
-      _fetchPaymentMethods();
-    }
-  }
-
-  Future<void> _fetchPaymentMethods() async {
-    final response = await http.get(
-      Uri.parse('${GlobalData.url}/payment-methods/user/$userId'),
-    );
-    if (response.statusCode == 200) {
-      setState(() {
-        paymentMethods = json.decode(response.body);
-      });
-    } else {
-      print('Error al obtener métodos de pago');
-    }
-  }
-
-  Future<void> _processPayment() async {
-    if (selectedPaymentMethod == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Por favor, selecciona un método de pago')),
-      );
-      return;
-    }
-
+  Future<void> createPreferenceAndPay() async {
     setState(() {
       _isLoading = true;
     });
 
-    // Actualizar el reservationData con el estado de pago y el método de pago seleccionado
-    final paymentData = {
-      ...widget.reservationData,
-      "payment_status": "completado",
-      "payment_method_id": selectedPaymentMethod['id'],
-    };
-
     try {
-      // Primero, crear la reserva con el pago completado
-      final reservationResponse = await http.post(
-        Uri.parse('${GlobalData.url}/reservations'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(paymentData),
+      final response = await http.post(
+        Uri.parse("${GlobalData.url}/api/pagos/crear-preferencia"), // Ajusta la URL según tu backend
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"precio": widget.totalPrice}),
       );
 
-      if (reservationResponse.statusCode == 201) {
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final String initPoint = responseData["init_point"];
+
+        if (initPoint.isNotEmpty) {
+          print("Redirigiendo a: $initPoint");
+
+          if (await canLaunchUrl(Uri.parse(initPoint))) {
+            await launchUrl(Uri.parse(initPoint), mode: LaunchMode.externalApplication);
+            // Después de lanzar la URL, verificamos el estado del pago
+            _checkPaymentStatus();
+          } else {
+            setState(() {
+              _statusMessage = "No se pudo abrir el enlace de pago";
+            });
+          }
+        }
+      } else {
+        setState(() {
+          _statusMessage = "Error al generar el pago: ${response.body}";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _statusMessage = "Error de conexión: $e";
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _checkPaymentStatus() async {
+    // Simulamos una verificación con el backend (ajusta según tu API)
+    try {
+      final response = await http.post(
+        Uri.parse("${GlobalData.url}/reservations"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(widget.reservationData),
+      );
+
+      if (response.statusCode == 201) {
+        final reservationResponse = jsonDecode(response.body);
+        String reservationId = reservationResponse["id"]; // Asegúrate de que tu backend devuelva el ID
+
+        // Actualizamos el estado del pago a "pagado"
+        await _updateReservationStatus(reservationId, "pagado");
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Pago y reserva realizados con éxito')),
+          SnackBar(content: Text("Pago exitoso y reserva confirmada")),
         );
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => Scaffold(body: Center(child: Text('MainScreen')))), // Reemplaza con tu MainScreen real
+          MaterialPageRoute(builder: (context) => MainScreen()),
           (Route<dynamic> route) => false,
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al procesar el pago y la reserva')),
+          SnackBar(content: Text("El pago no fue confirmado")),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text("Error al verificar el pago: $e")),
       );
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
-  Widget _buildPaymentMethodCard(Map<String, dynamic> paymentMethod) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedPaymentMethod = paymentMethod;
-        });
-      },
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              selectedPaymentMethod == paymentMethod ? Colors.green.shade700 : Colors.blueGrey.shade900,
-              Colors.black87
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: const Color.fromARGB(66, 61, 34, 156),
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              paymentMethod['card_holder'],
-              style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            SizedBox(height: 12),
-            Text(
-              '**** **** **** ${paymentMethod['card_number'].substring(paymentMethod['card_number'].length - 4)}',
-              style: TextStyle(fontSize: 20, letterSpacing: 2, color: Colors.white),
-            ),
-            SizedBox(height: 12),
-            Text(
-              'Expira: ${paymentMethod['expiration_date']}',
-              style: TextStyle(color: Colors.white70),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> _updateReservationStatus(String reservationId, String status) async {
+    try {
+      await http.put(
+        Uri.parse("${GlobalData.url}/reservations/$reservationId"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"payment_status": status}),
+      );
+    } catch (e) {
+      print("Error al actualizar estado: $e");
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    createPreferenceAndPay(); // Inicia el proceso de pago automáticamente
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Realizar Pago'),
-        backgroundColor: Colors.green[700],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
+      appBar: AppBar(title: Text("Pago con MercadoPago")),
+      body: Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Detalles de la Reserva',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text('Total a pagar: \$${widget.totalPrice.toStringAsFixed(2)}'),
-            Text('Fecha de inicio: ${widget.reservationData["rental_start"]}'),
-            Text('Fecha de fin: ${widget.reservationData["rental_end"]}'),
-            Text('Dirección: ${widget.reservationData["address_entrega"]}'),
-            SizedBox(height: 24),
-            Text(
-              'Selecciona un Método de Pago',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            paymentMethods.isEmpty
-                ? Center(child: Text('No tienes métodos de pago guardados.'))
-                : ListView.builder(
-                    shrinkWrap: true, // Para que funcione dentro de SingleChildScrollView
-                    physics: NeverScrollableScrollPhysics(), // Desactiva el scroll interno
-                    itemCount: paymentMethods.length,
-                    itemBuilder: (context, index) {
-                      return _buildPaymentMethodCard(paymentMethods[index]);
-                    },
-                  ),
-            SizedBox(height: 16),
-            _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[700],
-                      minimumSize: Size(double.infinity, 50), // Botón de ancho completo
-                    ),
-                    onPressed: _processPayment,
-                    child: Text('Confirmar Pago', style: TextStyle(color: Colors.white)),
-                  ),
+            if (_isLoading) CircularProgressIndicator(),
+            SizedBox(height: 20),
+            Text(_statusMessage, textAlign: TextAlign.center),
           ],
         ),
       ),
     );
   }
 }
-

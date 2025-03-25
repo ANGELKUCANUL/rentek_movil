@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:rentek/screens/perfil/metodo_pago/payment.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../perfil/Login.dart';
@@ -10,7 +11,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../main.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../perfil/metodo_pago/payment.dart'; // Asegúrate de que este import sea correcto
+import 'package:rentek/screens/perfil/metodo_pago/PaymentMethod.dart'; // Importamos la nueva pantalla de pago
 
 class MachineryDetailScreen extends StatefulWidget {
   final dynamic machinery;
@@ -130,7 +131,7 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
     }
   }
 
-  Future<void> _submitReservation() async {
+  Future<void> _navigateToPaymentScreen() async {
     if (!_formKey.currentState!.validate()) return;
 
     DateTime startDate = DateTime.parse(_startDateController.text);
@@ -152,37 +153,18 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
       _isLoading = true;
     });
 
-    try {
-      final response = await http.post(
-        Uri.parse('${GlobalData.url}/reservations'),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(reservationData),
-      );
-
-      if (response.statusCode == 201) {
-        _showNotification();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Reserva creada exitosamente")),
-        );
-
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => MainScreen()),
-          (Route<dynamic> route) => false,
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error al crear la reserva")),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
-    }
-
-    setState(() {
-      _isLoading = false;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentScreen(
+          totalPrice: totalPrice,
+          reservationData: reservationData,
+        ),
+      ),
+    ).then((_) {
+      setState(() {
+        _isLoading = false;
+      });
     });
   }
 
@@ -205,35 +187,6 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
       'Reserva Confirmada',
       'Tu reserva ha sido creada con éxito.',
       platformChannelSpecifics,
-    );
-  }
-
-  void _navigateToPaymentMethodScreen() {
-    if (!_formKey.currentState!.validate()) return;
-
-    DateTime startDate = DateTime.parse(_startDateController.text);
-    int days = int.parse(_daysController.text);
-    DateTime endDate = startDate.add(Duration(days: days));
-
-    final reservationData = {
-      "rental_start": _startDateController.text,
-      "rental_end": endDate.toString().split(' ')[0],
-      "address_entrega": _addressController.text,
-      "userId": userId ?? "",
-      "machineryId": widget.machinery['id'],
-      "price": totalPrice,
-      "payment_status": "pendiente",
-      "delivery_status": "pendiente",
-    };
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PaymentScreen(
-          totalPrice: totalPrice,
-          reservationData: reservationData,
-        ),
-      ),
     );
   }
 
@@ -391,17 +344,11 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
                   SizedBox(height: 16),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700]),
-                    onPressed: _navigateToPaymentMethodScreen,
-                    child: Text('Agregar Método de Pago', style: TextStyle(color: Colors.white)),
+                    onPressed: _navigateToPaymentScreen,
+                    child: Text('Reservar y Pagar', style: TextStyle(color: Colors.white)),
                   ),
                   SizedBox(height: 16),
-                  _isLoading
-                      ? CircularProgressIndicator()
-                      : ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.yellow[700]),
-                          onPressed: _submitReservation,
-                          child: Text('Reservar', style: TextStyle(color: Colors.black)),
-                        ),
+                  if (_isLoading) CircularProgressIndicator(),
                 ],
               ),
             ),
@@ -411,4 +358,3 @@ class _MachineryDetailScreenState extends State<MachineryDetailScreen> {
     );
   }
 }
-
