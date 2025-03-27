@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rentek/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'Login.dart';
 import 'metodo_pago/PaymentMethod.dart';
 
@@ -32,20 +33,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Cerrar Sesión"),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Row(
+            children: [
+              Icon(Icons.logout, color: Colors.redAccent, size: 24),
+              SizedBox(width: 10),
+              Text("Cerrar Sesión", style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
           content: Text("¿Estás seguro de que deseas cerrar sesión?"),
           actions: [
             TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.blueGrey),
               onPressed: () => Navigator.of(context).pop(),
-              child: Text("Cancelar"),
+              child: Text("Cancelar", style: TextStyle(fontSize: 16)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
               onPressed: () {
-                Navigator.of(context).pop(); // Cierra el diálogo
-                _logout(); // Cierra sesión y recarga la pantalla
+                Navigator.of(context).pop();
+                _logout();
               },
-              child: Text("Cerrar Sesión", style: TextStyle(color: Colors.white)),
+              child: Text("Cerrar Sesión", style: TextStyle(fontSize: 16, color: Colors.white)),
             ),
           ],
         );
@@ -62,9 +74,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       email = null;
     });
 
-    Navigator.pop(context); // Cierra el menú lateral
+    Navigator.pop(context);
 
-    // Recarga la pantalla y vuelve a MainScreen
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => MainScreen()),
@@ -76,10 +87,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context,
       MaterialPageRoute(builder: (context) => LoginScreen()),
     ).then((_) {
-      _loadUserData(); // Recarga los datos después de iniciar sesión
+      _loadUserData();
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => MainScreen()), // Recarga la pantalla principal
+        MaterialPageRoute(builder: (context) => MainScreen()),
       );
     });
   }
@@ -91,40 +102,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            decoration: BoxDecoration(color: Colors.yellow.shade800),
-            accountName: username != null
-                ? Text(username!, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold))
-                : Text("Hola", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            accountEmail: email != null ? Text(email!) : null,
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, size: 50, color: Colors.black54),
+            decoration: BoxDecoration(
+              color: Colors.blueGrey[900],
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(15)),
             ),
+            accountName: Text(
+              username ?? "Hola",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            accountEmail: email != null
+                ? Text(email!, style: TextStyle(fontSize: 16, color: Colors.grey[200]))
+                : null,
+            currentAccountPicture: CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, size: 50, color: Colors.blueGrey[700]),
+            ),
+            margin: EdgeInsets.zero,
           ),
-
           if (username == null) ...[
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              padding: EdgeInsets.all(16.0),
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.yellow.shade700),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey[700],
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                ),
                 onPressed: _navigateToLogin,
-                child: Text("Iniciar Sesión"),
+                child: Text(
+                  "Iniciar Sesión",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
               ),
             ),
             ListTile(
-              leading: Icon(Icons.warning, color: Colors.red),
-              title: Text("Es necesario iniciar sesión para acceder a las opciones."),
+              leading: Icon(Icons.warning, color: Colors.orange[700]),
+              title: Text(
+                "Inicia sesión para más opciones",
+                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+              ),
             ),
           ] else ...[
+            SizedBox(height: 10),
             ListTile(
-              leading: Icon(Icons.exit_to_app),
-              title: Text("Cerrar Sesión"),
+              leading: Icon(Icons.exit_to_app, color: Colors.redAccent),
+              title: Text("Cerrar Sesión", style: TextStyle(fontSize: 16, color: Colors.grey[800])),
               onTap: _confirmLogout,
             ),
-            Divider(),
+            Divider(color: Colors.grey[300], indent: 16, endIndent: 16),
             ListTile(
-              leading: Icon(Icons.credit_card),
-              title: Text("Método de pago"),
+              leading: Icon(Icons.credit_card, color: Colors.blueGrey[600]),
+              title: Text("Método de pago", style: TextStyle(fontSize: 16, color: Colors.grey[800])),
               onTap: () {
                 Navigator.push(
                   context,
@@ -133,13 +162,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.help_outline),
-              title: Text("Preguntas Frecuentes"),
+              leading: Icon(Icons.help_outline, color: Colors.blueGrey[600]),
+              title: Text("Preguntas Frecuentes", style: TextStyle(fontSize: 16, color: Colors.grey[800])),
               onTap: () {},
             ),
             ListTile(
-              leading: Icon(Icons.support_agent),
-              title: Text("Centro de Ayuda"),
+              leading: Icon(Icons.support_agent, color: Colors.blueGrey[600]),
+              title: Text("Centro de Ayuda", style: TextStyle(fontSize: 16, color: Colors.grey[800])),
               onTap: () {
                 Navigator.push(
                   context,
@@ -147,35 +176,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               },
             ),
-            Divider(),
+            Divider(color: Colors.grey[300], indent: 16, endIndent: 16),
             ListTile(
-              leading: Icon(Icons.home),
-              title: Text("Página de inicio"),
+              leading: Icon(Icons.home, color: Colors.blueGrey[600]),
+              title: Text("Página de inicio", style: TextStyle(fontSize: 16, color: Colors.grey[800])),
               onTap: () {},
             ),
             ListTile(
-              leading: Icon(Icons.card_giftcard),
-              title: Text("Promociones"),
+              leading: Icon(Icons.card_giftcard, color: Colors.blueGrey[600]),
+              title: Text("Promociones", style: TextStyle(fontSize: 16, color: Colors.grey[800])),
               onTap: () {},
             ),
             ListTile(
-              leading: Icon(Icons.info_outline),
-              title: Text("Sobre Rentadora"),
+              leading: Icon(Icons.info_outline, color: Colors.blueGrey[600]),
+              title: Text("Sobre Rentadora", style: TextStyle(fontSize: 16, color: Colors.grey[800])),
               onTap: () {},
             ),
-            Divider(),
+            Divider(color: Colors.grey[300], indent: 16, endIndent: 16),
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text("Sigue a Rentadora", style: TextStyle(fontWeight: FontWeight.bold)),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Text(
+                "Sigue a Rentadora",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey[800]),
+              ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Icon(Icons.facebook, size: 30),
-                Icon(Icons.camera_alt, size: 30),
-                Icon(Icons.business, size: 30),
-                Icon(Icons.pin_drop, size: 30),
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  IconButton(
+                  icon: Icon(Icons.facebook, size: 30, color: Colors.blueGrey[600]),
+                  onPressed: () async {
+                    const url = 'https://www.facebook.com/share/12HY3Bq9tFX'; // Reemplaza con la URL real
+                    if (await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(Uri.parse(url));
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('No se pudo abrir Facebook')),
+                      );
+                    }
+                  },
+                ),
+                  IconButton(
+                    icon: Icon(Icons.camera_alt, size: 30, color: Colors.blueGrey[600]),
+                    onPressed: () {},
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.business, size: 30, color: Colors.blueGrey[600]),
+                    onPressed: () {},
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.pin_drop, size: 30, color: Colors.blueGrey[600]),
+                    onPressed: () {},
+                  ),
+                ],
+              ),
             ),
             SizedBox(height: 20),
           ],

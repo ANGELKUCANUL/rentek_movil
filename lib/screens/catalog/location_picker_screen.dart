@@ -17,7 +17,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   LatLng? selectedLocation;
   String address = "Buscando ubicación...";
   bool isLoading = true;
-  TextEditingController searchController = TextEditingController(); // Controlador del buscador
+  TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
@@ -110,7 +110,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Dirección no encontrada")),
+        SnackBar(
+          content: Text("Dirección no encontrada"),
+          backgroundColor: Colors.redAccent,
+          duration: Duration(seconds: 2),
+        ),
       );
     }
   }
@@ -118,11 +122,18 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Seleccionar Ubicación")),
+      appBar: AppBar(
+        title: Text(
+          "Seleccionar Ubicación",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        backgroundColor: Colors.blueGrey[900],
+        elevation: 0,
+      ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
                 Expanded(
@@ -130,55 +141,116 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     controller: searchController,
                     decoration: InputDecoration(
                       hintText: "Buscar dirección...",
+                      hintStyle: TextStyle(color: Colors.grey[500]),
+                      prefixIcon: Icon(Icons.search, color: Colors.blueGrey[600]),
+                      filled: true,
+                      fillColor: Colors.grey[100],
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                      contentPadding: EdgeInsets.symmetric(vertical: 14),
                     ),
                     onSubmitted: (_) => _searchLocation(),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.search),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueGrey[600],
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
                   onPressed: _searchLocation,
+                  child: Icon(Icons.search, color: Colors.white),
                 ),
               ],
             ),
           ),
           Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : GoogleMap(
-                    onMapCreated: (controller) {
-                      mapController = controller;
-                      if (selectedLocation != null) {
-                        mapController!.animateCamera(CameraUpdate.newLatLng(selectedLocation!));
-                      }
-                    },
-                    initialCameraPosition: CameraPosition(
-                      target: selectedLocation ?? const LatLng(37.7749, -122.4194), // Ubicación por defecto
-                      zoom: 14,
-                    ),
-                    markers: selectedLocation != null
-                        ? {Marker(markerId: const MarkerId("seleccionado"), position: selectedLocation!)}
-                        : {},
-                    onTap: _onMapTap,
-                  ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+            child: Stack(
               children: [
-                Text("Dirección: $address", textAlign: TextAlign.center),
-                const SizedBox(height: 10),
+                isLoading
+                    ? Center(child: CircularProgressIndicator(color: Colors.blueGrey))
+                    : GoogleMap(
+                        onMapCreated: (controller) {
+                          mapController = controller;
+                          if (selectedLocation != null) {
+                            mapController!.animateCamera(CameraUpdate.newLatLng(selectedLocation!));
+                          }
+                        },
+                        initialCameraPosition: CameraPosition(
+                          target: selectedLocation ?? const LatLng(37.7749, -122.4194),
+                          zoom: 14,
+                        ),
+                        markers: selectedLocation != null
+                            ? {
+                                Marker(
+                                  markerId: const MarkerId("seleccionado"),
+                                  position: selectedLocation!,
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+                                )
+                              }
+                            : {},
+                        onTap: _onMapTap,
+                      ),
+                if (!isLoading)
+                  Positioned(
+                    top: 10,
+                    left: MediaQuery.of(context).size.width * 0.25,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                      ),
+                      child: Text(
+                        "Toca el mapa para ajustar",
+                        style: TextStyle(fontSize: 14, color: Colors.blueGrey[700]),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.all(16),
+            color: Colors.grey[50],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.location_pin, size: 20, color: Colors.blueGrey[600]),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Dirección: $address",
+                        style: TextStyle(fontSize: 16, color: Colors.grey[800]),
+                        textAlign: TextAlign.left,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16),
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selectedLocation != null ? Colors.blueGrey[800] : Colors.grey[400],
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    elevation: 2,
+                  ),
                   onPressed: selectedLocation != null
                       ? () {
                           widget.onLocationSelected(selectedLocation!, address);
                           Navigator.pop(context);
                         }
                       : null,
-                  child: const Text("Confirmar Ubicación"),
+                  child: Text(
+                    "Confirmar Ubicación",
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
                 ),
               ],
             ),

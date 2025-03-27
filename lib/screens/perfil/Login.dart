@@ -38,12 +38,20 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Correo o contraseña incorrectos")),
+          SnackBar(
+            content: Text("Correo o contraseña incorrectos"),
+            backgroundColor: Colors.redAccent,
+            duration: Duration(seconds: 2),
+          ),
         );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Por favor, ingrese usuario y contraseña")),
+        SnackBar(
+          content: Text("Por favor, ingrese usuario y contraseña"),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
       );
     }
 
@@ -54,104 +62,192 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          backgroundColor: Colors.white,
-          body: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(height: 50),
-                Icon(Icons.lock, size: 100, color: Colors.yellow.shade800),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Logo o ícono
+                  Container(
+                    padding: EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.blueGrey[50],
+                    ),
+                    child: Icon(
+                      Icons.lock_rounded,
+                      size: 80,
+                      color: Colors.blueGrey[800],
+                    ),
+                  ),
+                  SizedBox(height: 30),
 
-                SizedBox(height: 20),
-                Text(
-                  "Bienvenido de nuevo",
-                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.black87),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  "Inicia sesión para continuar",
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-                SizedBox(height: 40),
-                _buildTextField(controller: _usernameController, label: "Correo electrónico"),
-                SizedBox(height: 20),
-                _buildTextField(
-                  controller: _passwordController,
-                  label: "Contraseña",
-                  obscureText: !_isPasswordVisible,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                      color: Colors.black54,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordVisible = !_isPasswordVisible;
-                      });
-                    },
-                  ),
-                ),
-                SizedBox(height: 30),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _login,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.yellow.shade800,
-                    padding: EdgeInsets.symmetric(horizontal: 80, vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  // Título y subtítulo
+                  Text(
+                    "Bienvenido de nuevo",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueGrey[900],
                     ),
                   ),
-                  child: _isLoading
-                      ? CircularProgressIndicator(color: Colors.white)
-                      : Text("Iniciar sesión", style: TextStyle(color: Colors.white, fontSize: 18)),
-                ),
-                SizedBox(height: 20),
-                TextButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => RegisterScreen()),
+                  SizedBox(height: 8),
+                  Text(
+                    "Inicia sesión para continuar",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
                   ),
-                  child: Text("¿No tienes una cuenta? Regístrate", style: TextStyle(color: Colors.black)),
-                ),
-              ],
+                  SizedBox(height: 40),
+
+                  // Campos de texto
+                  _buildTextField(
+                    controller: _usernameController,
+                    label: "Correo electrónico",
+                    icon: Icons.email,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  SizedBox(height: 20),
+                  _buildTextField(
+                    controller: _passwordController,
+                    label: "Contraseña",
+                    icon: Icons.lock,
+                    obscureText: !_isPasswordVisible,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        color: Colors.blueGrey[600],
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isPasswordVisible = !_isPasswordVisible;
+                        });
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 10),
+
+                  // Botón "Olvidaste tu contraseña" (opcional)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {},
+                      child: Text(
+                        "¿Olvidaste tu contraseña?",
+                        style: TextStyle(
+                          color: Colors.blueGrey[700],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 30),
+
+                  // Botón de inicio de sesión
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueGrey[800],
+                      padding: EdgeInsets.symmetric(horizontal: 100, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                    ),
+                    child: _isLoading
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            "Iniciar sesión",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                  SizedBox(height: 20),
+
+                  // Registro
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "¿No tienes una cuenta? ",
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => RegisterScreen()),
+                        ),
+                        child: Text(
+                          "Regístrate",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueGrey[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
+            if (_isLoading)
+              Container(
+                color: Colors.black.withOpacity(0.3),
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.blueGrey[700]),
+                ),
+              ),
+          ],
         ),
-        if (_isLoading)
-          Container(
-            color: Colors.black.withOpacity(0.5),
-            child: Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            ),
-          ),
-      ],
+      ),
     );
   }
 
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
+    required IconData icon,
     bool obscureText = false,
     Widget? suffixIcon,
+    TextInputType? keyboardType,
   }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: Colors.black),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.yellow.shade800),
-          ),
-          suffixIcon: suffixIcon,
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.grey[700]),
+        prefixIcon: Icon(icon, color: Colors.blueGrey[600]),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.blueGrey.shade700, width: 2),
+        ),
+        contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       ),
     );
   }
