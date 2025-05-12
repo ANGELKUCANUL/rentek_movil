@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'machinery_detail_screen.dart';
 import '../../service/url.dart';
-import '../perfil/Login.dart';
 
 class MachineryListScreen extends StatefulWidget {
   @override
@@ -75,20 +74,10 @@ class _MachineryListScreenState extends State<MachineryListScreen> {
     }
   }
 
-  void _navigateToLogin(BuildContext dialogContext) {
-    Navigator.of(dialogContext).pop(); // Cerrar el diálogo
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
-    ).then((_) {
-      checkUserSession(); // Actualizar la sesión al regresar
-    });
-  }
-
   void _showLoginRequiredDialog() {
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) { // Usar un nuevo contexto para el diálogo
+      builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           title: Row(
@@ -105,7 +94,7 @@ class _MachineryListScreenState extends State<MachineryListScreen> {
           actions: [
             TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.blueGrey[700]),
-              onPressed: () => Navigator.of(dialogContext).pop(), // Cerrar el diálogo
+              onPressed: () => Navigator.of(context).pop(),
               child: Text('Cerrar', style: TextStyle(fontSize: 16)),
             ),
             ElevatedButton(
@@ -113,7 +102,10 @@ class _MachineryListScreenState extends State<MachineryListScreen> {
                 backgroundColor: Colors.blueGrey[700],
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              onPressed: () => _navigateToLogin(dialogContext), // Pasar el contexto del diálogo
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushNamed(context, '/login');
+              },
               child: Text('Iniciar Sesión', style: TextStyle(fontSize: 16, color: Colors.white)),
             ),
           ],
@@ -274,14 +266,6 @@ class _MachineryListScreenState extends State<MachineryListScreen> {
     );
   }
 
-  Future<void> _refreshMachinery() async {
-    setState(() {
-      isLoading = true; // Mostrar el indicador de carga mientras se actualiza
-    });
-    await fetchMachinery(); // Llamar a la función de obtención de datos
-    _filterMachinery(); // Reaplicar los filtros después de actualizar
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -301,236 +285,237 @@ class _MachineryListScreenState extends State<MachineryListScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _refreshMachinery,
-        color: Colors.blueGrey[700],
-        child: isLoading
-            ? Center(child: CircularProgressIndicator(color: Colors.blueGrey[700]))
-            : Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.all(16),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Buscar maquinaria...',
-                        hintStyle: TextStyle(color: Colors.grey[500]),
-                        prefixIcon: Icon(Icons.search, color: Colors.blueGrey[600]),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: EdgeInsets.symmetric(vertical: 15),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator(color: Colors.blueGrey[700]))
+          : Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Buscar maquinaria...',
+                      hintStyle: TextStyle(color: Colors.grey[500]),
+                      prefixIcon: Icon(Icons.search, color: Colors.blueGrey[600]),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
-                      onChanged: (value) {
-                        setState(() {
-                          searchQuery = value;
-                          _filterMachinery();
-                        });
-                      },
+                      contentPadding: EdgeInsets.symmetric(vertical: 15),
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        searchQuery = value;
+                        _filterMachinery();
+                      });
+                    },
                   ),
-                  Expanded(
-                    child: filteredMachineryList.isEmpty
-                        ? Center(
-                            child: SingleChildScrollView(
-                              physics: AlwaysScrollableScrollPhysics(),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.construction, size: 60, color: Colors.grey[400]),
-                                  SizedBox(height: 10),
-                                  Text(
-                                    "No se encontraron maquinarias",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                  SizedBox(height: 10),
-                                  Text(
-                                    "Intenta ajustar tus filtros",
-                                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                                  ),
-                                ],
+                ),
+                Expanded(
+                  child: filteredMachineryList.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.construction, size: 60, color: Colors.grey[400]),
+                              SizedBox(height: 10),
+                              Text(
+                                "No se encontraron maquinarias",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[600],
+                                ),
                               ),
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            itemCount: filteredMachineryList.length,
-                            itemBuilder: (context, index) {
-                              final machinery = filteredMachineryList[index];
+                              SizedBox(height: 10),
+                              Text(
+                                "Intenta ajustar tus filtros",
+                                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          itemCount: filteredMachineryList.length,
+                          itemBuilder: (context, index) {
+                            final machinery = filteredMachineryList[index];
 
-                              return GestureDetector(
-                                onTap: () {
-                                  if (username == null) {
-                                    _showLoginRequiredDialog();
-                                  } else {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => MachineryDetailScreen(
-                                          machinery: machinery,
-                                          provider: machinery['Provider'],
-                                        ),
+                            return GestureDetector(
+                              onTap: () {
+                                if (username == null) {
+                                  _showLoginRequiredDialog();
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => MachineryDetailScreen(
+                                        machinery: machinery,
+                                        provider: machinery['provider'], // Cambiado de 'Provider' a 'provider'
                                       ),
-                                    ).then((_) {
-                                      checkUserSession();
-                                    });
-                                  }
-                                },
-                                child: Card(
-                                  elevation: 5,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                  margin: EdgeInsets.only(bottom: 12),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
-                                        child: Stack(
-                                          children: [
-                                            machinery['image_code'] != null
-                                                ? Image.network(
-                                                    machinery['image_code'],
-                                                    height: 180,
-                                                    width: double.infinity,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (context, error, stackTrace) {
-                                                      return Image.network(
-                                                        'https://th.bing.com/th/id/OIP.lWp9hgkXFNkI3XAY-v-K9gHaHa?rs=1&pid=ImgDetMain',
-                                                        height: 180,
-                                                        width: double.infinity,
-                                                        fit: BoxFit.cover,
-                                                      );
-                                                    },
-                                                  )
-                                                : Image.network(
-                                                    'https://th.bing.com/th/id/OIP.lWp9hgkXFNkI3XAY-v-K9gHaHa?rs=1&pid=ImgDetMain',
-                                                    height: 180,
-                                                    width: double.infinity,
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                            Positioned(
-                                              bottom: 0,
-                                              left: 0,
-                                              right: 0,
-                                              child: Container(
-                                                height: 60,
-                                                decoration: BoxDecoration(
-                                                  gradient: LinearGradient(
-                                                    begin: Alignment.topCenter,
-                                                    end: Alignment.bottomCenter,
-                                                    colors: [
-                                                      Colors.transparent,
-                                                      Colors.black.withOpacity(0.5),
-                                                    ],
-                                                  ),
+                                    ),
+                                  ).then((_) {
+                                    checkUserSession();
+                                  });
+                                }
+                              },
+                              child: Card(
+                                elevation: 5,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                margin: EdgeInsets.only(bottom: 12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Imagen destacada
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+                                      child: Stack(
+                                        children: [
+                                          machinery['image_code'] != null
+                                              ? Image.network(
+                                                  machinery['image_code'],
+                                                  height: 180,
+                                                  width: double.infinity,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Image.network(
+                                                      'https://th.bing.com/th/id/OIP.lWp9hgkXFNkI3XAY-v-K9gHaHa?rs=1&pid=ImgDetMain',
+                                                      height: 180,
+                                                      width: double.infinity,
+                                                      fit: BoxFit.cover,
+                                                    );
+                                                  },
+                                                )
+                                              : Image.network(
+                                                  'https://th.bing.com/th/id/OIP.lWp9hgkXFNkI3XAY-v-K9gHaHa?rs=1&pid=ImgDetMain',
+                                                  height: 180,
+                                                  width: double.infinity,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                          // Sombra en la parte inferior para transición suave
+                                          Positioned(
+                                            bottom: 0,
+                                            left: 0,
+                                            right: 0,
+                                            child: Container(
+                                              height: 60,
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  begin: Alignment.topCenter,
+                                                  end: Alignment.bottomCenter,
+                                                  colors: [
+                                                    Colors.transparent,
+                                                    Colors.black.withOpacity(0.5),
+                                                  ],
                                                 ),
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                      Padding(
-                                        padding: EdgeInsets.all(16),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    machinery['name'] ?? 'Sin nombre',
-                                                    style: TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.blueGrey[900],
-                                                    ),
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '\$${machinery['rental_price']?.toString() ?? 'N/A'}',
+                                    ),
+                                    // Contenido de la tarjeta
+                                    Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Nombre y precio en la misma fila
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  machinery['name'] ?? 'Sin nombre',
                                                   style: TextStyle(
                                                     fontSize: 18,
                                                     fontWeight: FontWeight.bold,
-                                                    color: Colors.green[700],
+                                                    color: Colors.blueGrey[900],
                                                   ),
+                                                  overflow: TextOverflow.ellipsis,
                                                 ),
-                                              ],
-                                            ),
-                                            SizedBox(height: 8),
-                                            Text(
-                                              machinery['description'] ?? 'Sin descripción',
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey[700],
                                               ),
-                                            ),
-                                            SizedBox(height: 12),
-                                            Row(
-                                              children: [
-                                                Icon(Icons.branding_watermark, size: 16, color: Colors.blueGrey[500]),
-                                                SizedBox(width: 6),
-                                                Text(
-                                                  machinery['brand'] ?? 'Sin marca',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.blueGrey[700],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            SizedBox(height: 8),
-                                            Row(
-                                              children: [
-                                                Icon(Icons.location_on, size: 16, color: Colors.blueGrey[500]),
-                                                SizedBox(width: 6),
-                                                Text(
-                                                  machinery['location'] ?? 'Sin ubicación',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.blueGrey[700],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            SizedBox(height: 12),
-                                            Container(
-                                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                              decoration: BoxDecoration(
-                                                color: Colors.blueAccent.withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              child: Text(
-                                                'Proveedor: ${machinery['Provider']?['name'] ?? 'Sin proveedor'}',
+                                              Text(
+                                                '\$${machinery['rental_price']?.toString() ?? 'N/A'}',
                                                 style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.blueAccent,
+                                                  fontSize: 18,
                                                   fontWeight: FontWeight.bold,
+                                                  color: Colors.green[700],
                                                 ),
                                               ),
+                                            ],
+                                          ),
+                                          SizedBox(height: 8),
+                                          // Descripción
+                                          Text(
+                                            machinery['description'] ?? 'Sin descripción',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey[700],
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                          SizedBox(height: 12),
+                                          // Marca
+                                          Row(
+                                            children: [
+                                              Icon(Icons.branding_watermark, size: 16, color: Colors.blueGrey[500]),
+                                              SizedBox(width: 6),
+                                              Text(
+                                                machinery['brand'] ?? 'Sin marca',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.blueGrey[700],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(height: 8),
+                                          // Ubicación
+                                          Row(
+                                            children: [
+                                              Icon(Icons.location_on, size: 16, color: Colors.blueGrey[500]),
+                                              SizedBox(width: 6),
+                                              Text(
+                                                machinery['location'] ?? 'Sin ubicación',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.blueGrey[700],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(height: 12),
+                                          // Proveedor como chip
+                                          Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: Colors.blueAccent.withOpacity(0.1),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              'Proveedor: ${machinery['provider']?['name'] ?? 'Sin proveedor'}', // Cambiado de provider a machinery['provider']
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.blueAccent,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-      ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
     );
   }
 }
